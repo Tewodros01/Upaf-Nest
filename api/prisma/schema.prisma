@@ -1,0 +1,944 @@
+generator client {
+  provider     = "prisma-client"
+  output       = "../generated/prisma"
+  moduleFormat = "cjs"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  USER
+  AGENT
+  ADMIN
+  MENTOR
+  COMPANY
+  INSTRUCTOR
+}
+
+enum Currency {
+  USD
+  EUR
+  GBP
+  ETB
+}
+
+enum TransactionType {
+  INCOME
+  EXPENSE
+  TRANSFER
+  DEPOSIT
+  WITHDRAWAL
+  AGENT_COMMISSION
+  REFERRAL_BONUS
+  COURSE_PURCHASE
+  MENTOR_PAYMENT
+  PROJECT_REWARD
+  CHALLENGE_PRIZE
+}
+
+enum TransactionStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REVERSED
+}
+
+enum RecurrenceInterval {
+  DAILY
+  WEEKLY
+  MONTHLY
+  YEARLY
+}
+
+enum PaymentMethod {
+  TELEBIRR
+  MPESA
+  CBE_BIRR
+  BANK_CARD
+}
+
+enum FinancialAccountType {
+  MOBILE_WALLET
+  BANK_ACCOUNT
+}
+
+enum FinancialAccountProvider {
+  TELEBIRR
+  MPESA
+  CBE_BIRR
+  BOA
+  OTHER_BANK
+  OTHER_WALLET
+}
+
+enum DepositStatus {
+  PENDING
+  COMPLETED
+  FAILED
+}
+
+enum WithdrawalStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  REJECTED
+}
+
+enum AgentStatus {
+  PENDING
+  ACTIVE
+  INACTIVE
+}
+
+enum MissionType {
+  DAILY
+  WEEKLY
+}
+
+enum MissionCategory {
+  DEPOSIT
+  INVITE
+  EARN
+  SAVE
+  INVEST
+  LEARN
+  BUILD
+  CHALLENGE
+  MENTOR
+  APPLY_JOB
+}
+
+enum NotificationType {
+  DEPOSIT
+  INVITE
+  SYSTEM
+  MISSION
+  WITHDRAWAL
+  TRANSFER
+  COURSE
+  MENTOR_SESSION
+  JOB_APPLICATION
+  PROJECT_UPDATE
+  CHALLENGE_RESULT
+}
+
+enum SkillLevel {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+  EXPERT
+}
+
+enum CourseStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum EnrollmentStatus {
+  ENROLLED
+  IN_PROGRESS
+  COMPLETED
+  DROPPED
+}
+
+enum ProjectStatus {
+  DRAFT
+  SUBMITTED
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
+  FEATURED
+}
+
+enum CompetitionType {
+  CODING
+  DESIGN
+  HACKATHON
+  QUIZ
+  ALGORITHM
+  DATA_SCIENCE
+}
+
+enum CompetitionStatus {
+  UPCOMING
+  REGISTRATION_OPEN
+  ONGOING
+  JUDGING
+  COMPLETED
+  CANCELLED
+}
+
+enum MentorshipStatus {
+  PENDING
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+enum SessionStatus {
+  SCHEDULED
+  ONGOING
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+enum JobType {
+  INTERNSHIP
+  FULL_TIME
+  PART_TIME
+  CONTRACT
+  FREELANCE
+}
+
+enum JobStatus {
+  DRAFT
+  PUBLISHED
+  CLOSED
+  FILLED
+}
+
+enum ApplicationStatus {
+  APPLIED
+  UNDER_REVIEW
+  SHORTLISTED
+  INTERVIEW_SCHEDULED
+  INTERVIEWED
+  SELECTED
+  REJECTED
+  WITHDRAWN
+}
+
+enum ExperienceLevel {
+  ENTRY_LEVEL
+  MID_LEVEL
+  SENIOR_LEVEL
+  LEAD_LEVEL
+}
+
+enum WorkMode {
+  REMOTE
+  ONSITE
+  HYBRID
+}
+
+model User {
+  id           String    @id @default(cuid())
+  username     String    @unique
+  email        String    @unique
+  password     String
+  firstName    String
+  lastName     String
+  phone        String?   @unique
+  avatar       String?
+  bio          String?   @db.Text
+  telegramId   String?   @unique
+  telegramUsername String?
+  telegramPhotoUrl String?
+  role         Role      @default(USER)
+  isVerified     Boolean   @default(false)
+  onboardingDone Boolean   @default(false)
+  coinsBalance   Int       @default(0)
+
+  // NEW PROFILE FIELDS
+  title        String?   // Job title or role
+  location     String?   // City, Country
+  website      String?   // Personal website
+  github       String?   // GitHub username
+  linkedin     String?   // LinkedIn profile
+  portfolio    String?   // Portfolio URL
+  resume       String?   // Resume file URL
+  experience   ExperienceLevel?
+  isAvailableForWork Boolean @default(false)
+  expectedSalary     Int?    // Expected salary range
+  preferredWorkMode  WorkMode?
+
+  // Keep core wallet and transaction relations
+  wallets      Wallet[]
+  sessions     Session[]
+  categories   Category[]
+  transactions Transaction[]
+  deposits     Deposit[]
+  withdrawals  Withdrawal[]
+  financialAccounts FinancialAccount[]
+  assignedDeposits    Deposit[]    @relation("DepositAgent")
+  assignedWithdrawals Withdrawal[] @relation("WithdrawalAgent")
+
+  // Keep agent/referral system - useful for platform growth
+  referredBy      AgentInvite? @relation("InvitedUser",  fields: [referredById], references: [id], onDelete: SetNull)
+  referredById    String?
+  sentInvites     AgentInvite[] @relation("InviterUser")
+
+  // NEW RELATIONS FOR 6-PILLAR PLATFORM
+  skills           UserSkill[]
+  enrollments      Enrollment[]
+  createdCourses   Course[]      @relation("CourseInstructor")
+  projects         Project[]
+  competitionEntries CompetitionEntry[]
+  mentorProfile    MentorProfile?
+  mentorSessions   MentorSession[] @relation("SessionMentor")
+  menteeSessions   MentorSession[] @relation("SessionMentee")
+  companyProfile   CompanyProfile?
+  jobApplications  JobApplication[]
+  createdJobs      Job[]         @relation("JobCreator")
+  achievements     Achievement[]
+  certificates     Certificate[]
+
+  deletedAt    DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([email])
+  @@index([username])
+  @@index([telegramId])
+  @@index([deletedAt])
+  @@index([role])
+  @@index([isAvailableForWork])
+}
+
+model FinancialAccount {
+  id            String                   @id @default(cuid())
+  userId        String
+  user          User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type          FinancialAccountType
+  provider      FinancialAccountProvider
+  accountName   String?
+  accountNumber String
+  label         String?
+  isDefault     Boolean                  @default(false)
+  isActive      Boolean                  @default(true)
+  metadata      Json?
+  createdAt     DateTime                 @default(now())
+  updatedAt     DateTime                 @updatedAt
+
+  @@unique([userId, provider, accountNumber])
+  @@index([userId])
+  @@index([type])
+  @@index([provider])
+  @@index([isDefault])
+  @@index([isActive])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  refreshToken String   @db.VarChar(512)
+  userAgent    String?
+  ipAddress    String?
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+
+  @@unique([refreshToken])
+  @@index([userId])
+}
+
+model Wallet {
+  id           String        @id @default(cuid())
+  name         String
+  balance      Decimal       @default(0) @db.Decimal(19, 4)
+  currency     Currency      @default(ETB)
+  userId       String
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions Transaction[] @relation("WalletTransactions")
+  transfersOut Transaction[] @relation("TransferSource")
+  transfersIn  Transaction[] @relation("TransferDestination")
+  isDefault    Boolean       @default(false)
+  isActive     Boolean       @default(true)
+  deletedAt    DateTime?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@index([userId])
+  @@index([deletedAt])
+}
+
+model Category {
+  id           String          @id @default(cuid())
+  name         String
+  icon         String?
+  color        String?
+  type         TransactionType
+  isSystem     Boolean         @default(false)
+  userId       String?
+  user         User?           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+  createdAt    DateTime        @default(now())
+
+  @@unique([name, userId])
+  @@index([userId])
+}
+
+model Transaction {
+  id                  String              @id @default(cuid())
+  title               String
+  amount              Decimal             @db.Decimal(19, 4)
+  type                TransactionType
+  status              TransactionStatus   @default(COMPLETED)
+  note                String?             @db.Text
+  date                DateTime
+  userId              String
+  user                User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  walletId            String
+  wallet              Wallet              @relation("WalletTransactions", fields: [walletId], references: [id], onDelete: Restrict)
+  categoryId          String?
+  category            Category?           @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  sourceWalletId      String?
+  sourceWallet        Wallet?             @relation("TransferSource", fields: [sourceWalletId], references: [id], onDelete: SetNull)
+  destinationWalletId String?
+  destinationWallet   Wallet?             @relation("TransferDestination", fields: [destinationWalletId], references: [id], onDelete: SetNull)
+  isRecurring         Boolean             @default(false)
+  recurrenceInterval  RecurrenceInterval?
+  recurrenceEndsAt    DateTime?
+  parentTransactionId String?
+  parentTransaction   Transaction?        @relation("RecurringChildren", fields: [parentTransactionId], references: [id], onDelete: NoAction)
+  recurringChildren   Transaction[]       @relation("RecurringChildren")
+
+  deletedAt           DateTime?
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+
+  @@index([userId])
+  @@index([walletId])
+  @@index([categoryId])
+  @@index([date])
+  @@index([type])
+  @@index([status])
+  @@index([parentTransactionId])
+  @@index([deletedAt])
+}
+
+model Deposit {
+  id            String        @id @default(cuid())
+  userId        String
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  agentId       String?
+  agent         User?         @relation("DepositAgent", fields: [agentId], references: [id], onDelete: Restrict)
+  amount        Int           // in coins
+  method        PaymentMethod
+  reference     String?       @unique  // payment provider reference
+  proofUrl      String?       @db.Text // optional payment proof (link, image, pdf)
+  status        DepositStatus @default(PENDING)
+  failureReason String?
+  completedAt   DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@index([userId])
+  @@index([agentId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model Withdrawal {
+  id            String           @id @default(cuid())
+  userId        String
+  user          User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  agentId       String?
+  agent         User?            @relation("WithdrawalAgent", fields: [agentId], references: [id], onDelete: Restrict)
+  amount        Int              // in coins
+  feeAmount     Int              @default(0)
+  payoutAmount  Int              @default(0)
+  method        PaymentMethod
+  accountNumber String           // destination account
+  status        WithdrawalStatus @default(PENDING)
+  failureReason String?
+  processedAt   DateTime?
+  completedAt   DateTime?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  @@index([userId])
+  @@index([agentId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model AgentInvite {
+  id           String      @id @default(cuid())
+  inviterId    String
+  inviter      User        @relation("InviterUser", fields: [inviterId], references: [id], onDelete: Cascade)
+  invitedUsers User[]      @relation("InvitedUser")
+  code         String      @unique
+  status       AgentStatus @default(PENDING)
+  commission   Int         @default(0)  // total coins earned from this invite
+  usedAt       DateTime?
+  expiresAt    DateTime?
+  createdAt    DateTime    @default(now())
+
+  @@index([inviterId])
+  @@index([code])
+}
+
+model Mission {
+  id       String          @id @default(cuid())
+  title    String
+  desc     String
+  reward   Int
+  total    Int             @default(1)
+  type     MissionType
+  category MissionCategory
+  icon     String          @default("🎯")
+  isActive Boolean         @default(true)
+  resetAt  DateTime?       // when this mission resets (daily/weekly)
+  createdAt DateTime       @default(now())
+
+  userMissions UserMission[]
+
+  @@index([type])
+  @@index([isActive])
+}
+
+model UserMission {
+  id         String   @id @default(cuid())
+  userId     String
+  missionId  String
+  mission    Mission  @relation(fields: [missionId], references: [id], onDelete: Cascade)
+  progress   Int      @default(0)
+  claimed    Boolean  @default(false)
+  claimedAt  DateTime?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([userId, missionId])
+  @@index([userId])
+  @@index([missionId])
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  type      NotificationType
+  title     String
+  body      String           @db.Text
+  read      Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  @@index([userId])
+  @@index([read])
+  @@index([createdAt])
+}
+
+// ============================================
+// NEW MODELS FOR 6-PILLAR PLATFORM
+// ============================================
+
+// 1. LEARN PILLAR - Skills & Learning
+model Skill {
+  id          String      @id @default(cuid())
+  name        String      @unique
+  description String?
+  category    String      // e.g., "Programming", "Design", "Data Science"
+  icon        String?
+  isActive    Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+
+  userSkills  UserSkill[]
+  courses     CourseSkill[]
+  jobs        JobSkill[]
+  projects    ProjectSkill[]
+
+  @@index([category])
+  @@index([isActive])
+}
+
+model UserSkill {
+  id        String     @id @default(cuid())
+  userId    String
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  skillId   String
+  skill     Skill      @relation(fields: [skillId], references: [id], onDelete: Cascade)
+  level     SkillLevel @default(BEGINNER)
+  verified  Boolean    @default(false)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  @@unique([userId, skillId])
+  @@index([userId])
+  @@index([skillId])
+}
+
+model Course {
+  id           String        @id @default(cuid())
+  title        String
+  description  String        @db.Text
+  thumbnail    String?
+  instructorId String
+  instructor   User          @relation("CourseInstructor", fields: [instructorId], references: [id], onDelete: Cascade)
+  price        Int           @default(0) // in coins
+  duration     Int?          // in minutes
+  level        SkillLevel    @default(BEGINNER)
+  status       CourseStatus  @default(DRAFT)
+  isPublished  Boolean       @default(false)
+  isFeatured   Boolean       @default(false)
+  rating       Float         @default(0)
+  enrollCount  Int           @default(0)
+  content      Json?         // Course modules/lessons structure
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  skills       CourseSkill[]
+  enrollments  Enrollment[]
+  reviews      CourseReview[]
+
+  @@index([instructorId])
+  @@index([status])
+  @@index([isPublished])
+  @@index([level])
+  @@index([rating])
+}
+
+model CourseSkill {
+  id       String @id @default(cuid())
+  courseId String
+  course   Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  skillId  String
+  skill    Skill  @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@unique([courseId, skillId])
+  @@index([courseId])
+  @@index([skillId])
+}
+
+model Enrollment {
+  id         String           @id @default(cuid())
+  userId     String
+  user       User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  courseId   String
+  course     Course           @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  status     EnrollmentStatus @default(ENROLLED)
+  progress   Int              @default(0) // percentage 0-100
+  startedAt  DateTime         @default(now())
+  completedAt DateTime?
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+
+  @@unique([userId, courseId])
+  @@index([userId])
+  @@index([courseId])
+  @@index([status])
+}
+
+model CourseReview {
+  id        String   @id @default(cuid())
+  userId    String
+  courseId  String
+  course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  rating    Int      // 1-5 stars
+  comment   String?  @db.Text
+  createdAt DateTime @default(now())
+
+  @@unique([userId, courseId])
+  @@index([courseId])
+  @@index([rating])
+}
+
+// 2. BUILD PILLAR - Projects & Portfolio
+model Project {
+  id          String        @id @default(cuid())
+  title       String
+  description String        @db.Text
+  thumbnail   String?
+  userId      String
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status      ProjectStatus @default(DRAFT)
+  repoUrl     String?       // GitHub repository
+  liveUrl     String?       // Live demo URL
+  videoUrl    String?       // Demo video
+  likes       Int           @default(0)
+  views       Int           @default(0)
+  isFeatured  Boolean       @default(false)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  skills      ProjectSkill[]
+  comments    ProjectComment[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([isFeatured])
+  @@index([likes])
+  @@index([createdAt])
+}
+
+model ProjectSkill {
+  id        String @id @default(cuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  skillId   String
+  skill     Skill   @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, skillId])
+  @@index([projectId])
+  @@index([skillId])
+}
+
+model ProjectComment {
+  id        String   @id @default(cuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  userId    String
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+
+  @@index([projectId])
+  @@index([userId])
+}
+
+// 3. CHALLENGE PILLAR - Competitions & Contests
+model Competition {
+  id          String            @id @default(cuid())
+  title       String
+  description String            @db.Text
+  type        CompetitionType
+  status      CompetitionStatus @default(UPCOMING)
+  thumbnail   String?
+  prize       Int               @default(0) // in coins
+  entryFee    Int               @default(0) // in coins
+  maxParticipants Int           @default(1000)
+  startDate   DateTime
+  endDate     DateTime
+  judgeIds    Json?             // Array of judge user IDs
+  rules       String?           @db.Text
+  isSponsored Boolean           @default(false)
+  sponsor     String?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  entries     CompetitionEntry[]
+  winners     CompetitionWinner[]
+
+  @@index([type])
+  @@index([status])
+  @@index([startDate])
+  @@index([endDate])
+}
+
+model CompetitionEntry {
+  id            String      @id @default(cuid())
+  competitionId String
+  competition   Competition @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+  userId        String
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  submissionUrl String?     // GitHub repo, file upload, etc.
+  description   String?     @db.Text
+  score         Int?        // Judge's score
+  rank          Int?
+  submittedAt   DateTime    @default(now())
+  createdAt     DateTime    @default(now())
+
+  @@unique([competitionId, userId])
+  @@index([competitionId])
+  @@index([userId])
+  @@index([score])
+}
+
+model CompetitionWinner {
+  id            String      @id @default(cuid())
+  competitionId String
+  competition   Competition @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+  userId        String
+  position      Int         // 1st, 2nd, 3rd place
+  prize         Int         // prize amount in coins
+  createdAt     DateTime    @default(now())
+
+  @@unique([competitionId, position])
+  @@index([competitionId])
+  @@index([userId])
+}
+
+// 4. MENTORS PILLAR - Mentorship System
+model MentorProfile {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expertise    String   @db.Text // Areas of expertise
+  experience   String   @db.Text // Professional experience
+  hourlyRate   Int      @default(0) // in coins per hour
+  availability Json?    // Available time slots
+  rating       Float    @default(0)
+  totalSessions Int     @default(0)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  sessions     MentorSession[]
+  reviews      MentorReview[]
+
+  @@index([isActive])
+  @@index([rating])
+  @@index([hourlyRate])
+}
+
+model MentorSession {
+  id          String            @id @default(cuid())
+  mentorId    String
+  mentor      User              @relation("SessionMentor", fields: [mentorId], references: [id], onDelete: Cascade)
+  menteeId    String
+  mentee      User              @relation("SessionMentee", fields: [menteeId], references: [id], onDelete: Cascade)
+  mentorProfile MentorProfile   @relation(fields: [mentorId], references: [userId], onDelete: Cascade, map: "MentorSession_mentorProfile_fkey")
+  title       String
+  description String?           @db.Text
+  status      MentorshipStatus  @default(PENDING)
+  sessionStatus SessionStatus   @default(SCHEDULED)
+  scheduledAt DateTime
+  duration    Int               @default(60) // in minutes
+  meetingUrl  String?
+  notes       String?           @db.Text
+  cost        Int               @default(0) // in coins
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  @@index([mentorId])
+  @@index([menteeId])
+  @@index([status])
+  @@index([scheduledAt])
+}
+
+model MentorReview {
+  id              String        @id @default(cuid())
+  mentorProfileId String
+  mentorProfile   MentorProfile @relation(fields: [mentorProfileId], references: [id], onDelete: Cascade)
+  reviewerId      String
+  rating          Int           // 1-5 stars
+  comment         String?       @db.Text
+  createdAt       DateTime      @default(now())
+
+  @@index([mentorProfileId])
+  @@index([rating])
+}
+
+// 5. INTERNSHIP & JOB PILLARS - Career Opportunities
+model CompanyProfile {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String
+  description String   @db.Text
+  website     String?
+  logo        String?
+  industry    String?
+  size        String?  // "1-10", "11-50", "51-200", etc.
+  location    String?
+  founded     Int?
+  isVerified  Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  jobs        Job[]
+
+  @@index([isVerified])
+  @@index([industry])
+  @@index([location])
+}
+
+model Job {
+  id           String          @id @default(cuid())
+  title        String
+  description  String          @db.Text
+  type         JobType
+  status       JobStatus       @default(DRAFT)
+  creatorId    String
+  creator      User            @relation("JobCreator", fields: [creatorId], references: [id], onDelete: Cascade)
+  companyId    String?
+  company      CompanyProfile? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  location     String?
+  workMode     WorkMode        @default(REMOTE)
+  experience   ExperienceLevel @default(ENTRY_LEVEL)
+  salaryMin    Int?
+  salaryMax    Int?
+  currency     Currency        @default(ETB)
+  deadline     DateTime?
+  requirements String          @db.Text
+  benefits     String?         @db.Text
+  isSponsored  Boolean         @default(false)
+  views        Int             @default(0)
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  skills       JobSkill[]
+  applications JobApplication[]
+
+  @@index([creatorId])
+  @@index([companyId])
+  @@index([type])
+  @@index([status])
+  @@index([workMode])
+  @@index([experience])
+  @@index([createdAt])
+}
+
+model JobSkill {
+  id      String @id @default(cuid())
+  jobId   String
+  job     Job    @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  skillId String
+  skill   Skill  @relation(fields: [skillId], references: [id], onDelete: Cascade)
+  required Boolean @default(true)
+
+  @@unique([jobId, skillId])
+  @@index([jobId])
+  @@index([skillId])
+}
+
+model JobApplication {
+  id          String            @id @default(cuid())
+  jobId       String
+  job         Job               @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status      ApplicationStatus @default(APPLIED)
+  coverLetter String?           @db.Text
+  resume      String?           // Resume file URL
+  portfolio   String?           // Portfolio URL
+  notes       String?           @db.Text // Internal notes from recruiter
+  appliedAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  @@unique([jobId, userId])
+  @@index([jobId])
+  @@index([userId])
+  @@index([status])
+  @@index([appliedAt])
+}
+
+// ACHIEVEMENTS & CERTIFICATIONS
+model Achievement {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title       String
+  description String   @db.Text
+  icon        String?
+  category    String   // "Learning", "Building", "Challenge", "Mentorship", "Career"
+  points      Int      @default(0)
+  isPublic    Boolean  @default(true)
+  earnedAt    DateTime @default(now())
+
+  @@index([userId])
+  @@index([category])
+  @@index([earnedAt])
+}
+
+model Certificate {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title       String
+  issuer      String    // Course instructor, competition organizer, etc.
+  description String?   @db.Text
+  imageUrl    String?   // Certificate image
+  verifyUrl   String?   // Verification URL
+  skillsJson  Json?     // Skills covered in this certificate
+  issuedAt    DateTime
+  expiresAt   DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([userId])
+  @@index([issuer])
+  @@index([issuedAt])
+}
