@@ -4,7 +4,12 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { ApplicationStatus, JobStatus, Role } from 'generated/prisma/client';
+import {
+  ApplicationStatus,
+  JobStatus,
+  Prisma,
+  Role,
+} from 'generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   ApplyJobDto,
@@ -30,7 +35,7 @@ export class JobsService {
     } = query;
     const skip = (page - 1) * limit;
 
-    const where: any = { status: JobStatus.PUBLISHED };
+    const where: Prisma.JobWhereInput = { status: JobStatus.PUBLISHED };
     if (type) where.type = type;
     if (workMode) where.workMode = workMode;
     if (experience) where.experience = experience;

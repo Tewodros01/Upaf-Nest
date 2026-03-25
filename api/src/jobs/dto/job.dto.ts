@@ -1,14 +1,25 @@
 import {
-  IsString, IsOptional, IsNumber, IsEnum, IsBoolean,
-  IsDateString, IsArray, Min,
+  IsArray,
+  IsBoolean,
+  IsDateString,
+  IsEnum,
+  IsNumber,
+  IsOptional,
+  IsString,
+  Min,
 } from 'class-validator';
-import { JobType, JobStatus, WorkMode, ExperienceLevel } from 'generated/prisma/client';
+import {
+  ExperienceLevel,
+  JobStatus,
+  JobType,
+  WorkMode,
+} from 'generated/prisma/client';
 
 export class CreateJobDto {
-  @IsString() title: string;
-  @IsString() description: string;
-  @IsEnum(JobType) type: JobType;
-  @IsString() requirements: string;
+  @IsString() title!: string;
+  @IsString() description!: string;
+  @IsEnum(JobType) type!: JobType;
+  @IsString() requirements!: string;
   @IsOptional() @IsString() location?: string;
   @IsOptional() @IsEnum(WorkMode) workMode?: WorkMode;
   @IsOptional() @IsEnum(ExperienceLevel) experience?: ExperienceLevel;
@@ -34,7 +45,7 @@ export class ApplyJobDto {
 }
 
 export class UpdateApplicationDto {
-  @IsString() status: string;
+  @IsString() status!: string;
   @IsOptional() @IsString() notes?: string;
 }
 
