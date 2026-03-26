@@ -11,6 +11,9 @@ import {
   Role,
   TransactionType,
 } from 'generated/prisma/client';
+import { AchievementsService } from '../achievements/achievements.service';
+import { CertificatesService } from '../certificates/certificates.service';
+import { MissionsService } from '../missions/missions.service';
 import { LedgerService } from '../ledger/ledger.service';
 import { PrismaService } from '../prisma/prisma.service';
 import {
@@ -26,6 +29,9 @@ export class CompetitionsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly ledger: LedgerService,
+    private readonly achievements: AchievementsService,
+    private readonly certificates: CertificatesService,
+    private readonly missions: MissionsService,
   ) {}
 
   async findAll(query: CompetitionQueryDto) {

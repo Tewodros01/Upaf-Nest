@@ -15,6 +15,9 @@ import {
   Role,
   TransactionType,
 } from 'generated/prisma/client';
+import { AchievementsService } from '../achievements/achievements.service';
+import { CertificatesService } from '../certificates/certificates.service';
+import { MissionsService } from '../missions/missions.service';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   CourseQueryDto,
@@ -26,7 +29,12 @@ import { UpdateCourseDto } from './dto/update-course.dto';
 
 @Injectable()
 export class CoursesService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private readonly achievements: AchievementsService,
+    private readonly certificates: CertificatesService,
+    private readonly missions: MissionsService,
+  ) {}
 
   // COURSE MANAGEMENT
   async createCourse(
@@ -366,6 +374,12 @@ export class CoursesService {
       data: { enrollCount: { increment: 1 } },
     });
 
+    // Trigger mission + achievement
+    await Promise.all([
+      this.missions.incrementCategoryProgress(userId, 'LEARN'),
+      this.achievements.award(userId, 'FIRST_COURSE'),
+    ]);
+
     return enrollment;
   }
 
@@ -425,15 +439,20 @@ export class CoursesService {
       updateData.completedAt = new Date();
     }
 
-    return this.prisma.enrollment.update({
-      where: {
-        userId_courseId: { userId, courseId },
-      },
+    const updated = await this.prisma.enrollment.update({
+      where: { userId_courseId: { userId, courseId } },
       data: updateData,
-      include: {
-        course: true,
-      },
+      include: { course: true },
     });
+
+    if (data.progress === 100 && enrollment.status !== EnrollmentStatus.COMPLETED) {
+      await Promise.all([
+        this.achievements.award(userId, 'COURSE_COMPLETED'),
+        this.certificates.issueForCourse(userId, courseId),
+      ]);
+    }
+
+    return updated;
   }
 
   // REVIEWS & RATINGS
