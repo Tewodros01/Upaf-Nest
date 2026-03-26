@@ -1,5 +1,12 @@
 import {
-  Body, Controller, Get, Param, Post, Put, Query, UseGuards,
+  Body,
+  Controller,
+  Get,
+  Param,
+  Post,
+  Put,
+  Query,
+  UseGuards,
 } from '@nestjs/common';
 import { Role } from 'generated/prisma/client';
 import { GetUser } from '../auth/decorators/get-user.decorators';
@@ -8,8 +15,11 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { CompetitionsService } from './competitions.service';
 import {
-  CompetitionQueryDto, CreateCompetitionDto, ScoreEntryDto,
-  SubmitEntryDto, UpdateCompetitionDto,
+  CompetitionQueryDto,
+  CreateCompetitionDto,
+  ScoreEntryDto,
+  SubmitEntryDto,
+  UpdateCompetitionDto,
 } from './dto/competition.dto';
 
 @Controller('competitions')

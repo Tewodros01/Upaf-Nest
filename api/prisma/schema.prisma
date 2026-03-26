@@ -36,6 +36,7 @@ enum TransactionType {
   MENTOR_PAYMENT
   PROJECT_REWARD
   CHALLENGE_PRIZE
+  GAME_ENTRY
 }
 
 enum TransactionStatus {

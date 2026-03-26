@@ -1,16 +1,24 @@
 import {
-  BadRequestException, ConflictException, ForbiddenException,
-  Injectable, NotFoundException,
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
 } from '@nestjs/common';
 import {
-  CompetitionStatus, CompetitionType, Role, TransactionType,
+  CompetitionStatus,
+  Prisma,
+  Role,
+  TransactionType,
 } from 'generated/prisma/client';
 import { LedgerService } from '../ledger/ledger.service';
-import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
 import {
-  CompetitionQueryDto, CreateCompetitionDto, ScoreEntryDto,
-  SubmitEntryDto, UpdateCompetitionDto,
+  CompetitionQueryDto,
+  CreateCompetitionDto,
+  ScoreEntryDto,
+  SubmitEntryDto,
+  UpdateCompetitionDto,
 } from './dto/competition.dto';
 
 @Injectable()
@@ -18,14 +26,13 @@ export class CompetitionsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly ledger: LedgerService,
-    private readonly notifications: NotificationsService,
   ) {}
 
   async findAll(query: CompetitionQueryDto) {
     const { type, status, search, page = 1, limit = 10 } = query;
     const skip = (page - 1) * limit;
 
-    const where: any = {};
+    const where: Prisma.CompetitionWhereInput = {};
     if (type) where.type = type;
     if (status) where.status = status;
     if (search) {
@@ -48,7 +55,10 @@ export class CompetitionsService {
       this.prisma.competition.count({ where }),
     ]);
 
-    return { competitions, pagination: { page, limit, total, pages: Math.ceil(total / limit) } };
+    return {
+      competitions,
+      pagination: { page, limit, total, pages: Math.ceil(total / limit) },
+    };
   }
 
   async findOne(id: string, userId?: string) {
@@ -59,8 +69,13 @@ export class CompetitionsService {
           orderBy: [{ score: 'desc' }, { submittedAt: 'asc' }],
           take: 20,
           select: {
-            id: true, userId: true, submissionUrl: true,
-            description: true, score: true, rank: true, submittedAt: true,
+            id: true,
+            userId: true,
+            submissionUrl: true,
+            description: true,
+            score: true,
+            rank: true,
+            submittedAt: true,
           },
         },
         winners: { orderBy: { position: 'asc' } },
@@ -70,7 +85,9 @@ export class CompetitionsService {
 
     if (!competition) throw new NotFoundException('Competition not found');
 
-    let myEntry = null;
+    let myEntry: Awaited<
+      ReturnType<typeof this.prisma.competitionEntry.findUnique>
+    > | null = null;
     if (userId) {
       myEntry = await this.prisma.competitionEntry.findUnique({
         where: { competitionId_userId: { competitionId: id, userId } },
@@ -97,15 +114,25 @@ export class CompetitionsService {
   }
 
   async register(competitionId: string, userId: string) {
-    const comp = await this.prisma.competition.findUnique({ where: { id: competitionId } });
+    const comp = await this.prisma.competition.findUnique({
+      where: { id: competitionId },
+    });
     if (!comp) throw new NotFoundException('Competition not found');
 
-    if (comp.status === CompetitionStatus.COMPLETED || comp.status === CompetitionStatus.CANCELLED) {
-      throw new BadRequestException('Competition is no longer open for registration');
+    if (
+      comp.status === CompetitionStatus.COMPLETED ||
+      comp.status === CompetitionStatus.CANCELLED
+    ) {
+      throw new BadRequestException(
+        'Competition is no longer open for registration',
+      );
     }
 
-    const count = await this.prisma.competitionEntry.count({ where: { competitionId } });
-    if (count >= comp.maxParticipants) throw new BadRequestException('Competition is full');
+    const count = await this.prisma.competitionEntry.count({
+      where: { competitionId },
+    });
+    if (count >= comp.maxParticipants)
+      throw new BadRequestException('Competition is full');
 
     const existing = await this.prisma.competitionEntry.findUnique({
       where: { competitionId_userId: { competitionId, userId } },
@@ -134,7 +161,7 @@ export class CompetitionsService {
       await tx.notification.create({
         data: {
           userId,
-          type: 'TOURNAMENT',
+          type: 'CHALLENGE_RESULT',
           title: 'Competition Registered!',
           body: `You're registered for "${comp.title}". Good luck! 🏆`,
         },
@@ -144,22 +171,40 @@ export class CompetitionsService {
     });
   }
 
-  async submitEntry(competitionId: string, userId: string, dto: SubmitEntryDto) {
+  async submitEntry(
+    competitionId: string,
+    userId: string,
+    dto: SubmitEntryDto,
+  ) {
     const entry = await this.prisma.competitionEntry.findUnique({
       where: { competitionId_userId: { competitionId, userId } },
     });
-    if (!entry) throw new NotFoundException('You are not registered for this competition');
+    if (!entry)
+      throw new NotFoundException(
+        'You are not registered for this competition',
+      );
 
     return this.prisma.competitionEntry.update({
       where: { competitionId_userId: { competitionId, userId } },
-      data: { submissionUrl: dto.submissionUrl, description: dto.description, submittedAt: new Date() },
+      data: {
+        submissionUrl: dto.submissionUrl,
+        description: dto.description,
+        submittedAt: new Date(),
+      },
     });
   }
 
-  async scoreEntry(competitionId: string, entryUserId: string, dto: ScoreEntryDto, judgeId: string) {
+  async scoreEntry(
+    competitionId: string,
+    entryUserId: string,
+    dto: ScoreEntryDto,
+    judgeId: string,
+  ) {
     const judge = await this.prisma.user.findUnique({ where: { id: judgeId } });
     if (!judge || (judge.role !== Role.ADMIN && judge.role !== Role.COMPANY)) {
-      throw new ForbiddenException('Only admins and company judges can score entries');
+      throw new ForbiddenException(
+        'Only admins and company judges can score entries',
+      );
     }
 
     const entry = await this.prisma.competitionEntry.findUnique({
@@ -175,7 +220,8 @@ export class CompetitionsService {
 
   async announceWinners(competitionId: string, adminId: string) {
     const admin = await this.prisma.user.findUnique({ where: { id: adminId } });
-    if (!admin || admin.role !== Role.ADMIN) throw new ForbiddenException('Admin only');
+    if (!admin || admin.role !== Role.ADMIN)
+      throw new ForbiddenException('Admin only');
 
     const comp = await this.prisma.competition.findUnique({
       where: { id: competitionId },
@@ -215,7 +261,7 @@ export class CompetitionsService {
           await tx.notification.create({
             data: {
               userId: entry.userId,
-              type: 'WIN',
+              type: 'CHALLENGE_RESULT',
               title: `🏆 You placed ${position}${position === 1 ? 'st' : position === 2 ? 'nd' : 'rd'}!`,
               body: `Congratulations! You won ${prize} coins in "${comp.title}"!`,
             },
@@ -242,7 +288,13 @@ export class CompetitionsService {
     const userIds = entries.map((e) => e.userId);
     const users = await this.prisma.user.findMany({
       where: { id: { in: userIds } },
-      select: { id: true, username: true, firstName: true, lastName: true, avatar: true },
+      select: {
+        id: true,
+        username: true,
+        firstName: true,
+        lastName: true,
+        avatar: true,
+      },
     });
     const userMap = new Map(users.map((u) => [u.id, u]));
 

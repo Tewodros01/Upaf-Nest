@@ -1,7 +1,16 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { Prisma, Skill, SkillLevel, UserSkill } from 'generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { CreateSkillDto, UpdateSkillDto, AddUserSkillDto, UpdateUserSkillDto } from './dto/skills.dto';
-import { Skill, UserSkill, SkillLevel } from 'generated/prisma/client';
+import {
+  AddUserSkillDto,
+  CreateSkillDto,
+  UpdateSkillDto,
+  UpdateUserSkillDto,
+} from './dto/skills.dto';
 
 @Injectable()
 export class SkillsService {
@@ -14,7 +23,10 @@ export class SkillsService {
         data,
       });
     } catch (error) {
-      if (error.code === 'P2002') {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
         throw new ConflictException('Skill with this name already exists');
       }
       throw error;
@@ -69,11 +81,14 @@ export class SkillsService {
       orderBy: { category: 'asc' },
     });
 
-    return categories.map(c => c.category);
+    return categories.map((c) => c.category);
   }
 
   // USER SKILLS MANAGEMENT
-  async addUserSkill(userId: string, data: AddUserSkillDto): Promise<UserSkill> {
+  async addUserSkill(
+    userId: string,
+    data: AddUserSkillDto,
+  ): Promise<UserSkill> {
     // Check if skill exists
     await this.getSkillById(data.skillId);
 
@@ -89,7 +104,10 @@ export class SkillsService {
         },
       });
     } catch (error) {
-      if (error.code === 'P2002') {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
         throw new ConflictException('User already has this skill');
       }
       throw error;
@@ -106,7 +124,11 @@ export class SkillsService {
     });
   }
 
-  async updateUserSkill(userId: string, skillId: string, data: UpdateUserSkillDto): Promise<UserSkill> {
+  async updateUserSkill(
+    userId: string,
+    skillId: string,
+    data: UpdateUserSkillDto,
+  ): Promise<UserSkill> {
     const userSkill = await this.prisma.userSkill.findUnique({
       where: {
         userId_skillId: { userId, skillId },
@@ -149,7 +171,7 @@ export class SkillsService {
   // ANALYTICS & INSIGHTS
   async getSkillStats(skillId: string) {
     const skill = await this.getSkillById(skillId);
-    
+
     const stats = await this.prisma.userSkill.groupBy({
       by: ['level'],
       where: { skillId },
@@ -163,10 +185,13 @@ export class SkillsService {
     return {
       skill,
       totalUsers,
-      levelDistribution: stats.reduce((acc, stat) => {
-        acc[stat.level] = stat._count.level;
-        return acc;
-      }, {} as Record<SkillLevel, number>),
+      levelDistribution: stats.reduce(
+        (acc, stat) => {
+          acc[stat.level] = stat._count.level;
+          return acc;
+        },
+        {} as Record<SkillLevel, number>,
+      ),
     };
   }
 
@@ -199,18 +224,18 @@ export class SkillsService {
       { name: 'Node.js', category: 'Backend', icon: '🟢' },
       { name: 'Vue.js', category: 'Frontend', icon: '💚' },
       { name: 'Angular', category: 'Frontend', icon: '🔴' },
-      
+
       // Data Science
       { name: 'Machine Learning', category: 'Data Science', icon: '🤖' },
       { name: 'Data Analysis', category: 'Data Science', icon: '📊' },
       { name: 'SQL', category: 'Database', icon: '🗄️' },
       { name: 'MongoDB', category: 'Database', icon: '🍃' },
-      
+
       // Design
       { name: 'UI/UX Design', category: 'Design', icon: '🎨' },
       { name: 'Figma', category: 'Design', icon: '🔧' },
       { name: 'Adobe Photoshop', category: 'Design', icon: '🖼️' },
-      
+
       // DevOps
       { name: 'Docker', category: 'DevOps', icon: '🐳' },
       { name: 'AWS', category: 'Cloud', icon: '☁️' },

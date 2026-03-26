@@ -1,16 +1,16 @@
-import { IsString, IsOptional, IsBoolean, IsEnum } from 'class-validator';
+import { IsBoolean, IsEnum, IsOptional, IsString } from 'class-validator';
 import { SkillLevel } from 'generated/prisma/client';
 
 export class CreateSkillDto {
   @IsString()
-  name: string;
+  name!: string;
 
   @IsOptional()
   @IsString()
   description?: string;
 
   @IsString()
-  category: string;
+  category!: string;
 
   @IsOptional()
   @IsString()
@@ -41,10 +41,10 @@ export class UpdateSkillDto {
 
 export class AddUserSkillDto {
   @IsString()
-  skillId: string;
+  skillId!: string;
 
   @IsEnum(SkillLevel)
-  level: SkillLevel;
+  level!: SkillLevel;
 }
 
 export class UpdateUserSkillDto {

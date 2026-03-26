@@ -1,21 +1,26 @@
 import {
+  Body,
   Controller,
+  Delete,
   Get,
+  Param,
   Post,
   Put,
-  Delete,
-  Body,
-  Param,
   Query,
   UseGuards,
 } from '@nestjs/common';
+import { Role } from 'generated/prisma/client';
+import { GetUser } from '../auth/decorators/get-user.decorators';
+import { Roles } from '../auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles } from '../auth/decorators/roles.decorator';
-import { GetUser } from '../auth/decorators/get-user.decorators';
+import {
+  AddUserSkillDto,
+  CreateSkillDto,
+  UpdateSkillDto,
+  UpdateUserSkillDto,
+} from './dto/skills.dto';
 import { SkillsService } from './skills.service';
-import { CreateSkillDto, UpdateSkillDto, AddUserSkillDto, UpdateUserSkillDto } from './dto/skills.dto';
-import { Role } from 'generated/prisma/client';
 
 @Controller('skills')
 @UseGuards(JwtAuthGuard)
@@ -94,7 +99,11 @@ export class SkillsController {
     @Param('skillId') skillId: string,
     @Body() updateUserSkillDto: UpdateUserSkillDto,
   ) {
-    return this.skillsService.updateUserSkill(userId, skillId, updateUserSkillDto);
+    return this.skillsService.updateUserSkill(
+      userId,
+      skillId,
+      updateUserSkillDto,
+    );
   }
 
   @Delete('my-skills/:skillId')
