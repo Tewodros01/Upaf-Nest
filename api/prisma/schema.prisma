@@ -37,6 +37,7 @@ enum TransactionType {
   PROJECT_REWARD
   CHALLENGE_PRIZE
   GAME_ENTRY
+  GAME_WIN
 }
 
 enum TransactionStatus {
@@ -110,6 +111,7 @@ enum MissionCategory {
   CHALLENGE
   MENTOR
   APPLY_JOB
+  KENO
 }
 
 enum NotificationType {
@@ -124,6 +126,7 @@ enum NotificationType {
   JOB_APPLICATION
   PROJECT_UPDATE
   CHALLENGE_RESULT
+  WIN
 }
 
 enum SkillLevel {

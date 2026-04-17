@@ -156,6 +156,25 @@ export default function SignUp() {
                 onClick={() => setShowPw(!showPw)}
                 className="transition-colors" style={{ color: "var(--text-3)" }}
               >
+                {showPw ? <FiEyeOff /> : <FiEye />}
+              </button>
+            }
+            {...register("password")}
+          />
+          <Input
+            label="Confirm Password"
+            type={showCpw ? "text" : "password"}
+            placeholder="••••••••"
+            leftIcon={<FiLock />}
+            error={errors.confirmPassword?.message}
+            rightIcon={
+              <button
+                type="button"
+                aria-label={showCpw ? "Hide password" : "Show password"}
+                title={showCpw ? "Hide password" : "Show password"}
+                onClick={() => setShowCpw(!showCpw)}
+                className="transition-colors" style={{ color: "var(--text-3)" }}
+              >
                 {showCpw ? <FiEyeOff /> : <FiEye />}
               </button>
             }

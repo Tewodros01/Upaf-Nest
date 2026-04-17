@@ -27,29 +27,20 @@ import { UpdateCourseDto } from './dto/update-course.dto';
 export class CoursesController {
   constructor(private coursesService: CoursesService) {}
 
-  // PUBLIC ENDPOINTS
+  // ── Static routes first (must come before :id) ──────────────────────────
+
   @Get()
   async getCourses(@Query() query: CourseQueryDto) {
     return this.coursesService.getCourses(query);
   }
 
-  @Get(':id')
-  async getCourseById(
-    @Param('id') id: string,
-    @GetUser('sub') userId?: string,
+  @Get('my-enrollments')
+  @UseGuards(JwtAuthGuard)
+  async getUserEnrollments(
+    @GetUser('sub') userId: string,
+    @Query('status') status?: EnrollmentStatus,
   ) {
-    return this.coursesService.getCourseById(id, userId);
-  }
-
-  // INSTRUCTOR ENDPOINTS
-  @Post()
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.INSTRUCTOR, Role.ADMIN)
-  async createCourse(
-    @GetUser('sub') instructorId: string,
-    @Body() createCourseDto: CreateCourseDto,
-  ) {
-    return this.coursesService.createCourse(instructorId, createCourseDto);
+    return this.coursesService.getUserEnrollments(userId, status);
   }
 
   @Get('instructor/my-courses')
@@ -64,6 +55,26 @@ export class CoursesController {
   @Roles(Role.INSTRUCTOR, Role.ADMIN)
   async getInstructorStats(@GetUser('sub') instructorId: string) {
     return this.coursesService.getInstructorStats(instructorId);
+  }
+
+  // ── Parameterized routes ─────────────────────────────────────────────────
+
+  @Get(':id')
+  async getCourseById(
+    @Param('id') id: string,
+    @GetUser('sub') userId?: string,
+  ) {
+    return this.coursesService.getCourseById(id, userId);
+  }
+
+  @Post()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.INSTRUCTOR, Role.ADMIN)
+  async createCourse(
+    @GetUser('sub') instructorId: string,
+    @Body() createCourseDto: CreateCourseDto,
+  ) {
+    return this.coursesService.createCourse(instructorId, createCourseDto);
   }
 
   @Put(':id')
@@ -88,7 +99,6 @@ export class CoursesController {
     return { message: 'Course deleted successfully' };
   }
 
-  // STUDENT ENDPOINTS
   @Post(':id/enroll')
   @UseGuards(JwtAuthGuard)
   async enrollInCourse(
@@ -96,15 +106,6 @@ export class CoursesController {
     @GetUser('sub') userId: string,
   ) {
     return this.coursesService.enrollInCourse(userId, courseId);
-  }
-
-  @Get('my-enrollments')
-  @UseGuards(JwtAuthGuard)
-  async getUserEnrollments(
-    @GetUser('sub') userId: string,
-    @Query('status') status?: EnrollmentStatus,
-  ) {
-    return this.coursesService.getUserEnrollments(userId, status);
   }
 
   @Put(':id/enrollment')

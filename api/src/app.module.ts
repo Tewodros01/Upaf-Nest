@@ -21,7 +21,6 @@ import { CoursesModule } from './courses/courses.module';
 import { CompetitionsModule } from './competitions/competitions.module';
 import { JobsModule } from './jobs/jobs.module';
 import { MentorsModule } from './mentors/mentors.module';
-import { CoursesModule } from './courses/courses.module';
 
 @Module({
   imports: [

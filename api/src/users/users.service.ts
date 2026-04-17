@@ -426,6 +426,15 @@ export class UsersService {
     }
   }
 
+  async getUserStats(userId: string) {
+    const [enrollments, achievements, certificates] = await Promise.all([
+      this.prisma.enrollment.count({ where: { userId } }),
+      this.prisma.achievement.count({ where: { userId } }),
+      this.prisma.certificate.count({ where: { userId } }),
+    ]);
+    return { enrollments, achievements, certificates };
+  }
+
   async completeOnboarding(userId: string) {
     const user = await this.prisma.user.update({
       where: { id: userId },

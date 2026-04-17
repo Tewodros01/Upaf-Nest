@@ -93,6 +93,12 @@ export class UsersController {
     return this.usersService.updateRole(id, dto.role, adminId);
   }
 
+  @ApiOperation({ summary: 'Get current user stats' })
+  @Get('me/stats')
+  getMyStats(@GetUser('sub') userId: string) {
+    return this.usersService.getUserStats(userId);
+  }
+
   @ApiOperation({ summary: 'Get current user profile' })
   @Get('me')
   getMe(@GetUser('sub') userId: string) {
