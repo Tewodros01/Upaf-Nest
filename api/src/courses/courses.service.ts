@@ -445,7 +445,10 @@ export class CoursesService {
       include: { course: true },
     });
 
-    if (data.progress === 100 && enrollment.status !== EnrollmentStatus.COMPLETED) {
+    if (
+      data.progress === 100 &&
+      enrollment.status !== EnrollmentStatus.COMPLETED
+    ) {
       await Promise.all([
         this.achievements.award(userId, 'COURSE_COMPLETED'),
         this.certificates.issueForCourse(userId, courseId),
